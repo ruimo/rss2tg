@@ -1,0 +1,11 @@
+[package]
+name = "rss2tg"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+feed-rs = "2.3.1"
+rusqlite = { version = "0.40.0", features = ["bundled"] }
+tokio = { version = "1.52.3", features = ["full"] }
+reqwest = "0.13.4"
+urlencoding = "2.1.3"
