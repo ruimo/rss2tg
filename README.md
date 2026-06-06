@@ -71,12 +71,60 @@ cargo build --release
 
 ### 2. Chat IDの取得
 
-1. 作成したBotに何かメッセージを送信
-2. ブラウザで以下のURLにアクセス：
+Chat IDを取得するには、以下の手順を実行してください：
+
+1. **Telegramで作成したBotを検索して開く**
+   - Botのユーザー名（例：`@your_bot_name`）で検索
+   - Botとのチャットを開く
+
+2. **「START」ボタンを押して`/start`コマンドを実行**
+   - 初回は必ず`/start`を実行する必要があります
+   - これによりBotとのチャットが開始されます
+
+3. **普通のテキストメッセージを送信**
+   - 例：`Hello` や `Test` など、通常の文章を送信
+   - `/start`だけではChat IDが取得できないため、この手順が必要です
+
+4. **ブラウザで以下のURLにアクセス**
    ```
    https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
    ```
-3. レスポンスから`chat.id`の値を取得
+   - `<YOUR_BOT_TOKEN>`を実際のBot Tokenに置き換えてください
+
+5. **レスポンスからChat IDを取得**
+   
+   レスポンス例：
+   ```json
+   {
+     "ok": true,
+     "result": [
+       {
+         "update_id": 123456789,
+         "message": {
+           "message_id": 2,
+           "from": {
+             "id": 987654321,
+             "is_bot": false,
+             "first_name": "Your Name"
+           },
+           "chat": {
+             "id": 987654321,
+             "first_name": "Your Name",
+             "type": "private"
+           },
+           "date": 1234567890,
+           "text": "Hello"
+         }
+       }
+     ]
+   }
+   ```
+   
+   この例では、`"chat": { "id": 987654321 }`の`987654321`がChat IDです。
+
+**トラブルシューティング:**
+- レスポンスが`{"ok":true,"result":[]}`の場合：手順2と3を実行していません。`/start`を実行してから普通のテキストメッセージを送信してください。
+- グループチャットで使用する場合：Botをグループチャットに追加してから同様の手順を実行してください（グループのChat IDは負の数になります）。
 
 ### 3. 環境変数の設定
 
