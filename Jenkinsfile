@@ -4,7 +4,7 @@ pipeline {
     parameters {
         string(
             name: 'RSS_URL',
-            defaultValue: 'https://ruimo.github.io/ruimo-blog/rss.xml
+            defaultValue: 'https://ruimo.github.io/ruimo-blog/rss.xml'
             description: '監視するRSSフィードのURL'
         )
     }
