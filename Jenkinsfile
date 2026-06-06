@@ -1,6 +1,14 @@
 pipeline {
     agent any
     
+    parameters {
+        string(
+            name: 'RSS_URL',
+            defaultValue: 'https://ruimo.github.io/ruimo-blog/rss.xml
+            description: '監視するRSSフィードのURL'
+        )
+    }
+    
     triggers {
         // 毎時0分に実行
         cron('0 * * * *')
@@ -10,7 +18,7 @@ pipeline {
         // Jenkinsの認証情報から環境変数を設定
         TELEGRAM_TOKEN = credentials('telegram-token')
         CHAT_ID = credentials('telegram-chat-id')
-        RSS_URL = credentials('rss-url')
+        // RSS_URLはパラメータから取得
         DB_PATH = "${WORKSPACE}/.rss-cache/rss_data.db"
     }
     
@@ -45,8 +53,9 @@ pipeline {
             steps {
                 script {
                     echo "Running RSS monitor..."
+                    echo "RSS URL: ${params.RSS_URL}"
                     dir('.rss-cache') {
-                        sh '../rss2tg'
+                        sh "RSS_URL='${params.RSS_URL}' ../rss2tg"
                     }
                 }
             }

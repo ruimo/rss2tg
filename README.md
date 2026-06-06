@@ -304,23 +304,24 @@ Jenkinsサーバーに以下の認証情報を設定します：
 - Secret: あなたのChat ID
 - ID: `telegram-chat-id`
 
-**認証情報3: rss-url**
-- Kind: Secret text
-- Secret: 監視したいRSSフィードのURL
-- ID: `rss-url`
-
 #### 2. Jenkinsジョブの作成
 
 1. Jenkinsダッシュボードで「New Item」をクリック
 2. ジョブ名を入力（例：`rss2tg-monitor`）
 3. 「Pipeline」を選択して「OK」をクリック
-4. 「Pipeline」セクションで：
+4. 「General」セクションで：
+   - 「This project is parameterized」にチェック
+   - 「Add Parameter」→「String Parameter」を選択
+   - Name: `RSS_URL`
+   - Default Value: 監視したいRSSフィードのURL（例：`https://example.com/rss`）
+   - Description: `監視するRSSフィードのURL`
+5. 「Pipeline」セクションで：
    - Definition: `Pipeline script from SCM`
    - SCM: `Git`
    - Repository URL: `https://github.com/ruimo/rss2tg.git`
    - Branch: `*/main`
    - Script Path: `Jenkinsfile`
-5. 「Save」をクリック
+6. 「Save」をクリック
 
 #### 3. 実行スケジュール
 
