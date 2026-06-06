@@ -207,7 +207,7 @@ sudo systemctl enable rss2tg.timer
 sudo systemctl start rss2tg.timer
 ```
 
-### GitHub Actionsでの自動監視（推奨）
+### GitHub Actionsでの自動監視
 
 GitHub Actionsを使用して、1時間ごとに自動的にRSSフィードを監視し、新しいエントリーをTelegramに通知できます。
 
@@ -271,12 +271,102 @@ schedule:
 
 **注意**: GitHub Actionsの無料枠では、月2,000分まで利用可能です。1時間ごとの実行であれば十分に収まります。
 
+**GitHub Actionsのスケジュール実行の制限**: 新しいリポジトリや活動の少ないリポジトリでは、スケジュール実行が正常に動作しない場合があります。その場合は、以下のJenkinsを使用した方法をお勧めします。
+
 #### 5. 実行ログの確認
 
 1. GitHubリポジトリの「Actions」タブを開く
 2. 「RSS Monitor」ワークフローを選択
 3. 実行履歴から確認したいrunをクリック
 4. 各ステップの詳細ログを確認
+
+### Jenkinsでの自動監視
+
+GitHub Actionsのスケジュール実行が動作しない場合、Jenkinsを使用して定期実行できます。
+
+#### 1. Jenkinsの準備
+
+Jenkinsサーバーに以下の認証情報を設定します：
+
+1. Jenkinsダッシュボードを開く
+2. 「Manage Jenkins」→「Manage Credentials」をクリック
+3. 適切なドメイン（例：Global）を選択
+4. 「Add Credentials」をクリック
+5. 以下の3つの認証情報を追加：
+
+**認証情報1: telegram-token**
+- Kind: Secret text
+- Secret: あなたのTelegram Bot Token
+- ID: `telegram-token`
+
+**認証情報2: telegram-chat-id**
+- Kind: Secret text
+- Secret: あなたのChat ID
+- ID: `telegram-chat-id`
+
+**認証情報3: rss-url**
+- Kind: Secret text
+- Secret: 監視したいRSSフィードのURL
+- ID: `rss-url`
+
+#### 2. Jenkinsジョブの作成
+
+1. Jenkinsダッシュボードで「New Item」をクリック
+2. ジョブ名を入力（例：`rss2tg-monitor`）
+3. 「Pipeline」を選択して「OK」をクリック
+4. 「Pipeline」セクションで：
+   - Definition: `Pipeline script from SCM`
+   - SCM: `Git`
+   - Repository URL: `https://github.com/ruimo/rss2tg.git`
+   - Branch: `*/main`
+   - Script Path: `Jenkinsfile`
+5. 「Save」をクリック
+
+#### 3. 実行スケジュール
+
+[`Jenkinsfile`](Jenkinsfile)には以下のスケジュールが設定されています：
+
+```groovy
+triggers {
+    // 毎時0分に実行
+    cron('0 * * * *')
+}
+```
+
+スケジュールを変更したい場合は、Jenkinsfileの`cron`設定を編集してください：
+
+```groovy
+// 例：30分ごとに実行
+cron('*/30 * * * *')
+
+// 例：毎日9時に実行
+cron('0 9 * * *')
+```
+
+#### 4. 手動実行
+
+必要に応じて手動で実行することもできます：
+
+1. Jenkinsダッシュボードでジョブを選択
+2. 「Build Now」をクリック
+
+#### 5. 実行ログの確認
+
+1. Jenkinsダッシュボードでジョブを選択
+2. ビルド履歴から確認したいビルド番号をクリック
+3. 「Console Output」をクリックして詳細ログを確認
+
+#### Jenkinsfileの詳細
+
+[`Jenkinsfile`](Jenkinsfile)は以下の処理を実行します：
+
+1. **Setup**: データベース用ディレクトリを作成
+2. **Download Binary**: GitHubから最新のリリースバイナリをダウンロード
+3. **Run RSS Monitor**: RSS監視を実行
+4. **Show Database Info**: データベースのサイズを表示
+5. **Cleanup**: バイナリを削除（データベースは保持）
+
+データベースファイル（`.rss-cache/rss_data.db`）はワークスペースに保持されるため、重複通知が防止されます。
 
 ## データベース
 
