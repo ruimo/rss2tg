@@ -196,30 +196,34 @@ cargo build --release
 
 ## 開発者向け情報
 
-### リリースの作成
+### 自動リリース
 
-このプロジェクトはGitHub Actionsを使用して自動的にLinux用バイナリをビルドし、リリースします。
+このプロジェクトはGitHub Actionsを使用して、**mainまたはmasterブランチへのコミット時に自動的に**Linux用バイナリをビルドし、リリースを作成します。
 
-#### 新しいリリースを作成する方法
+#### リリースの仕組み
 
-1. バージョンタグを作成してプッシュ：
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
+1. `main`または`master`ブランチにコミットをプッシュ
 2. GitHub Actionsが自動的に：
    - Rustプロジェクトをビルド
-   - Linux x86_64用バイナリを作成
-   - tar.gz形式でアーカイブ
+   - バイナリをstripして最適化
+   - Linux x86_64用バイナリをtar.gz形式でアーカイブ
+   - SHA256チェックサムを生成
+   - タイムスタンプとコミットハッシュを含むリリースを作成
    - GitHubのReleasesページに公開
 
-3. [Releases](https://github.com/your-username/rss2tg/releases)ページで新しいリリースを確認
+3. リリース名の形式: `build-YYYYMMDD-HHMMSS-<commit-hash>`
+   - 例: `build-20260606-120000-a1b2c3d4`
+
+#### 最新ビルドの取得
+
+[Releases](https://github.com/your-username/rss2tg/releases)ページから最新のビルドをダウンロードできます。各リリースには以下が含まれます：
+
+- `rss2tg-linux-x86_64.tar.gz` - 実行可能バイナリ
+- `rss2tg-linux-x86_64.tar.gz.sha256` - SHA256チェックサム
 
 #### 手動でワークフローを実行
 
-GitHub ActionsのUIから手動でワークフローを実行することもできます：
+必要に応じて、GitHub ActionsのUIから手動でワークフローを実行することもできます：
 
 1. GitHubリポジトリの「Actions」タブを開く
 2. 「Release」ワークフローを選択
@@ -229,9 +233,12 @@ GitHub ActionsのUIから手動でワークフローを実行することもで�
 
 ワークフローファイル: [`.github/workflows/release.yml`](.github/workflows/release.yml)
 
-- **トリガー**: `v*`形式のタグがプッシュされたとき、または手動実行
+- **トリガー**: `main`/`master`ブランチへのプッシュ、または手動実行
 - **ビルド環境**: Ubuntu latest
-- **成果物**: `rss2tg-linux-x86_64.tar.gz`
+- **キャッシュ**: Cargoレジストリ、インデックス、ビルド成果物
+- **成果物**:
+  - `rss2tg-linux-x86_64.tar.gz` - バイナリアーカイブ
+  - `rss2tg-linux-x86_64.tar.gz.sha256` - チェックサムファイル
 
 ## ライセンス
 

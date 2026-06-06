@@ -2,15 +2,16 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+      - master
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-linux:
+  build-and-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,30 +20,70 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Build release binary
-        run: cargo build --release
+        run: cargo build --release --verbose
+
+      - name: Strip binary
+        run: strip target/release/rss2tg
 
       - name: Create archive
         run: |
           cd target/release
           tar -czf rss2tg-linux-x86_64.tar.gz rss2tg
-          cd ../..
+          sha256sum rss2tg-linux-x86_64.tar.gz > rss2tg-linux-x86_64.tar.gz.sha256
+          ls -lh rss2tg-linux-x86_64.tar.gz
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: rss2tg-linux-x86_64
-          path: target/release/rss2tg-linux-x86_64.tar.gz
+          path: |
+            target/release/rss2tg-linux-x86_64.tar.gz
+            target/release/rss2tg-linux-x86_64.tar.gz.sha256
+
+      - name: Get short SHA
+        id: slug
+        run: echo "sha8=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_OUTPUT
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: target/release/rss2tg-linux-x86_64.tar.gz
+          tag_name: build-${{ steps.date.outputs.date }}-${{ steps.slug.outputs.sha8 }}
+          name: Build ${{ steps.date.outputs.date }}
+          body: |
+            Automated build from commit ${{ github.sha }}
+            
+            **Commit Message:** ${{ github.event.head_commit.message }}
+            **Author:** ${{ github.event.head_commit.author.name }}
+            **Date:** ${{ steps.date.outputs.date }}
+          files: |
+            target/release/rss2tg-linux-x86_64.tar.gz
+            target/release/rss2tg-linux-x86_64.tar.gz.sha256
           draft: false
           prerelease: false
-          generate_release_notes: true
+          generate_release_notes: false
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# Made with Bob
