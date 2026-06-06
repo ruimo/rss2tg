@@ -13,6 +13,7 @@ RSSフィードを監視し、新しいエントリーをTelegramに通知する
 
 - Telegram Bot Token
 - Telegram Chat ID
+- RSS Feed URL
 
 ## インストール
 
@@ -84,19 +85,10 @@ cargo build --release
 ```bash
 export TELEGRAM_TOKEN="your_bot_token_here"
 export CHAT_ID="your_chat_id_here"
+export RSS_URL="https://example.com/rss"
 ```
 
 または、`.env`ファイルを作成して管理することもできます（推奨）。
-
-### 4. RSS URLの設定
-
-[`src/main.rs`](src/main.rs:14)の14行目にある`rss_url`を監視したいRSSフィードのURLに変更してください：
-
-```rust
-let rss_url = "https://example.com/rss"; // 監視対象のRSS URLに変更
-```
-
-**注意**: ソースからビルドした場合は、コードを編集してから再ビルドしてください。バイナリを使用する場合は、環境変数やコマンドライン引数でRSS URLを指定できるように改修が必要です。
 
 ## 使い方
 
@@ -119,7 +111,7 @@ TELEGRAM_TOKEN="your_token" CHAT_ID="your_chat_id" cargo run --release
 crontab -e
 
 # 例：5分ごとに実行（バイナリを使用）
-*/5 * * * * TELEGRAM_TOKEN="your_token" CHAT_ID="your_chat_id" /usr/local/bin/rss2tg
+*/5 * * * * TELEGRAM_TOKEN="your_token" CHAT_ID="your_chat_id" RSS_URL="https://example.com/rss" /usr/local/bin/rss2tg
 ```
 
 ### systemdサービスとして実行
@@ -137,6 +129,7 @@ After=network.target
 Type=oneshot
 Environment="TELEGRAM_TOKEN=your_token"
 Environment="CHAT_ID=your_chat_id"
+Environment="RSS_URL=https://example.com/rss"
 WorkingDirectory=/var/lib/rss2tg
 ExecStart=/usr/local/bin/rss2tg
 
@@ -166,6 +159,77 @@ sudo systemctl enable rss2tg.timer
 sudo systemctl start rss2tg.timer
 ```
 
+### GitHub Actionsでの自動監視（推奨）
+
+GitHub Actionsを使用して、1時間ごとに自動的にRSSフィードを監視し、新しいエントリーをTelegramに通知できます。
+
+#### 1. GitHubシークレットの設定
+
+リポジトリにTelegram Bot Token、Chat ID、RSS URLを安全に保存します：
+
+1. GitHubリポジトリページを開く
+2. 「Settings」タブをクリック
+3. 左サイドバーの「Secrets and variables」→「Actions」をクリック
+4. 「New repository secret」ボタンをクリック
+5. 以下の3つのシークレットを追加：
+
+**シークレット1: TELEGRAM_TOKEN**
+- Name: `TELEGRAM_TOKEN`
+- Secret: あなたのTelegram Bot Token（例：`123456789:ABCdefGHIjklMNOpqrsTUVwxyz`）
+
+**シークレット2: CHAT_ID**
+- Name: `CHAT_ID`
+- Secret: あなたのChat ID（例：`123456789`）
+
+**シークレット3: RSS_URL**
+- Name: `RSS_URL`
+- Secret: 監視したいRSSフィードのURL（例：`https://example.com/rss`）
+
+#### 2. ワークフローの有効化
+
+[`.github/workflows/rss-monitor.yml`](.github/workflows/rss-monitor.yml)ワークフローが自動的に：
+
+- **毎時0分（UTC時間）**にRSSフィードをチェック
+- 最新のビルド済みバイナリを自動ダウンロード
+- SQLiteデータベースをキャッシュして重複通知を防止
+- 新しいエントリーがあればTelegramに通知
+
+#### 3. 手動実行
+
+必要に応じて手動で実行することもできます：
+
+1. GitHubリポジトリの「Actions」タブを開く
+2. 「RSS Monitor」ワークフローを選択
+3. 「Run workflow」ボタンをクリック
+
+#### 4. 実行スケジュールの変更
+
+監視頻度を変更したい場合は、[`.github/workflows/rss-monitor.yml`](.github/workflows/rss-monitor.yml)の`cron`設定を編集してください：
+
+```yaml
+schedule:
+  # 例：30分ごとに実行
+  - cron: '*/30 * * * *'
+  
+  # 例：毎日9時（UTC）に実行
+  - cron: '0 9 * * *'
+```
+
+**cron構文の例：**
+- `0 * * * *` - 毎時0分
+- `*/30 * * * *` - 30分ごと
+- `0 */2 * * *` - 2時間ごと
+- `0 9 * * *` - 毎日9:00 UTC
+
+**注意**: GitHub Actionsの無料枠では、月2,000分まで利用可能です。1時間ごとの実行であれば十分に収まります。
+
+#### 5. 実行ログの確認
+
+1. GitHubリポジトリの「Actions」タブを開く
+2. 「RSS Monitor」ワークフローを選択
+3. 実行履歴から確認したいrunをクリック
+4. 各ステップの詳細ログを確認
+
 ## データベース
 
 アプリケーションは`rss_data.db`というSQLiteデータベースファイルを作成し、通知済みのエントリーIDを記録します。これにより、同じエントリーが複数回通知されることを防ぎます。
@@ -174,7 +238,7 @@ sudo systemctl start rss2tg.timer
 
 ### エラー: "environment variable not found"
 
-環境変数`TELEGRAM_TOKEN`または`CHAT_ID`が設定されていません。上記のセットアップ手順を確認してください。
+環境変数`TELEGRAM_TOKEN`、`CHAT_ID`、または`RSS_URL`が設定されていません。上記のセットアップ手順を確認してください。
 
 ### 通知が届かない
 

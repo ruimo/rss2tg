@@ -6,13 +6,13 @@ use std::env;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token = env::var("TELEGRAM_TOKEN")?;
     let chat_id = env::var("CHAT_ID")?;
+    let rss_url = env::var("RSS_URL")?;
     
     // キャッシュしたDBファイルを開く
     let conn = Connection::open("rss_data.db")?;
     conn.execute("CREATE TABLE IF NOT EXISTS history (id TEXT PRIMARY KEY)", [])?;
 
-    let rss_url = "https://example.com/rss"; // 監視対象
-    let content = reqwest::get(rss_url).await?.text().await?;
+    let content = reqwest::get(&rss_url).await?.text().await?;
     let feed = parser::parse(content.as_bytes())?;
 
     for entry in feed.entries.iter().take(5) {

@@ -1,0 +1,51 @@
+name: RSS Monitor
+
+on:
+  schedule:
+    # 毎時0分に実行（UTC時間）
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download latest release
+        run: |
+          # 最新のリリースからバイナリをダウンロード
+          LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | grep "browser_download_url.*tar.gz" | grep -v ".sha256" | cut -d '"' -f 4)
+          echo "Downloading from: $LATEST_RELEASE"
+          curl -L -o rss2tg.tar.gz "$LATEST_RELEASE"
+          tar -xzf rss2tg.tar.gz
+          chmod +x rss2tg
+          ls -lh rss2tg
+
+      - name: Setup database directory
+        run: |
+          mkdir -p .rss-cache
+          
+      - name: Restore database cache
+        uses: actions/cache@v3
+        with:
+          path: .rss-cache/rss_data.db
+          key: rss-db-${{ github.repository }}
+
+      - name: Run RSS monitor
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          RSS_URL: ${{ secrets.RSS_URL }}
+        run: |
+          cd .rss-cache
+          ../rss2tg
+          
+      - name: Show database info
+        run: |
+          if [ -f .rss-cache/rss_data.db ]; then
+            echo "Database size: $(du -h .rss-cache/rss_data.db)"
+          fi
+
+# Made with Bob
